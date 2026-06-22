@@ -1,19 +1,14 @@
 import os
 import csv
 import io
+import json
 import zipfile
 import xml.etree.ElementTree as ET
 from datetime import datetime, date
 import pandas as pd
+import requests
 import streamlit as st
-
-# --- CONDITIONAL PDF IMPORT ---
-try:
-    from pypdf import PdfReader
-    PYPDF_AVAILABLE = True
-except ImportError:
-    PYPDF_AVAILABLE = False
-
+from pypdf import PdfReader
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(
@@ -23,56 +18,175 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- CSS FOR PREMIUM LOOK ---
+# --- HELPER: LOAD LOCAL ENV KEY ---
+def load_env_key():
+    if os.path.exists(".env"):
+        with open(".env", "r", encoding="utf-8") as f:
+            for line in f:
+                if line.strip().startswith("GEMINI_API_KEY="):
+                    return line.strip().split("=", 1)[1]
+    return ""
+
+# --- CSS FOR PREMIUM GLASSMORPHISM LOOK ---
 st.markdown("""
 <style>
-    /* Custom CSS to style elements */
-    .metric-card {
-        background-color: #f0f2f6;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        text-align: center;
+    /* Global styles */
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+    
+    html, body, [class*="css"] {
+        font-family: 'Outfit', sans-serif;
+    }
+    
+    .stApp {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    }
+    
+    /* Premium card layout */
+    .premium-card {
+        background: rgba(255, 255, 255, 0.75);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        padding: 24px;
+        border-radius: 16px;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.08);
         margin-bottom: 20px;
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     }
-    .skill-tag {
-        display: inline-block;
-        padding: 5px 12px;
-        margin: 4px;
-        font-size: 14px;
-        font-weight: 500;
-        border-radius: 20px;
-        color: white;
+    
+    .premium-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.15);
     }
-    .skill-matched {
-        background-color: #2e7d32; /* Green */
-        border: 1px solid #1b5e20;
+    
+    /* Circular Gauge Widget */
+    .gauge-wrapper {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 10px;
     }
-    .skill-missing {
-        background-color: #c62828; /* Red */
-        border: 1px solid #b71c1c;
+    
+    .radial-gauge {
+        position: relative;
+        width: 160px;
+        height: 160px;
+        border-radius: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
-    .main-title {
-        font-size: 40px;
+    
+    .gauge-inner-circle {
+        position: absolute;
+        width: 130px;
+        height: 130px;
+        background: white;
+        border-radius: 50%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    .gauge-percentage {
+        font-size: 36px;
         font-weight: 800;
-        background: linear-gradient(90deg, #1f77b4, #aec7e8);
+        color: #4f46e5;
+        margin: 0;
+    }
+    
+    .gauge-label {
+        font-size: 11px;
+        color: #6b7280;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    /* Tags and Badges */
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 14px;
+        margin: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        border-radius: 9999px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        transition: all 0.2s ease;
+    }
+    
+    .badge-matched {
+        background-color: #ecfdf5;
+        color: #065f46;
+        border: 1px solid #a7f3d0;
+    }
+    
+    .badge-missing {
+        background-color: #fef2f2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+    }
+    
+    /* Header design */
+    .banner-title {
+        font-size: 44px;
+        font-weight: 800;
+        background: linear-gradient(90deg, #4f46e5 0%, #3b82f6 50%, #10b981 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        margin-bottom: 10px;
+        margin-bottom: 5px;
     }
-    .section-title {
-        font-size: 24px;
-        font-weight: 600;
-        margin-top: 20px;
-        margin-bottom: 10px;
-        border-bottom: 2px solid #f0f2f6;
-        padding-bottom: 5px;
+    
+    .banner-subtitle {
+        color: #4b5563;
+        font-size: 16px;
+        margin-bottom: 25px;
+        font-weight: 400;
     }
-    .app-status {
-        padding: 3px 10px;
-        border-radius: 5px;
+    
+    /* Kanban visual board styles */
+    .kanban-col {
+        background: rgba(249, 250, 251, 0.6);
+        border: 1px solid rgba(229, 231, 235, 0.5);
+        border-radius: 12px;
+        padding: 12px;
+        min-height: 400px;
+    }
+    
+    .kanban-card {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 14px;
+        margin-bottom: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+    
+    .kanban-card-title {
+        font-weight: 700;
+        font-size: 14px;
+        color: #1f2937;
+        margin-bottom: 2px;
+    }
+    
+    .kanban-card-sub {
         font-size: 12px;
-        font-weight: bold;
+        color: #6b7280;
+        margin-bottom: 8px;
+    }
+    
+    .kanban-card-action {
+        font-size: 11px;
+        color: #3b82f6;
+        background: #eff6ff;
+        padding: 4px 8px;
+        border-radius: 4px;
+        display: inline-block;
+        margin-bottom: 8px;
+        font-weight: 500;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -94,7 +208,14 @@ KEYWORDS = [
 # Ensure tracking folders exist
 os.makedirs(TRACKER_DIR, exist_ok=True)
 
-# --- HELPER FUNCTIONS ---
+# --- CONDITIONAL PDF IMPORT ---
+try:
+    from pypdf import PdfReader
+    PYPDF_AVAILABLE = True
+except ImportError:
+    PYPDF_AVAILABLE = False
+
+# --- FILE PARSERS ---
 def extract_text_from_pdf(file):
     if not PYPDF_AVAILABLE:
         st.error("PDF text extraction is currently unavailable because the 'pypdf' package is not installed in this environment. Run `pip install pypdf` or `conda install -c conda-forge pypdf` and restart the application.")
@@ -188,7 +309,6 @@ def load_applications():
     init_tracker_csv()
     try:
         df = pd.read_csv(TRACKER_PATH)
-        # Clean empty dates/columns
         df = df.fillna("")
         return df
     except Exception as e:
@@ -225,12 +345,122 @@ def get_sample_kb():
             return f.read()
     return ""
 
-# --- MAIN STREAMLIT APPLICATION FLOW ---
+# --- GEMINI AI CONNECTOR ---
+def call_gemini(api_key, prompt):
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+    headers = {"Content-Type": "application/json"}
+    payload = {
+        "contents": [{
+            "parts": [{"text": prompt}]
+        }]
+    }
+    try:
+        response = requests.post(url, headers=headers, json=payload, timeout=30)
+        if response.status_code == 200:
+            res_json = response.json()
+            return res_json['candidates'][0]['content']['parts'][0]['text']
+        else:
+            return f"Error: API returned status {response.status_code}\n{response.text}"
+    except Exception as e:
+        return f"Error connecting to Gemini API: {e}"
 
-st.write('<div class="main-title">CareerPrep Job-Hunting Agent</div>', unsafe_allow_html=True)
-st.write("An interactive AI-powered dashboard to analyze your resume match, bridge skill gaps, generate interview prep materials, and track job applications.")
+def clean_json_response(raw_text):
+    text_clean = raw_text.strip()
+    if text_clean.startswith("```json"):
+        text_clean = text_clean[7:]
+    if text_clean.endswith("```"):
+        text_clean = text_clean[:-3]
+    return text_clean.strip()
 
-# Initialize session state for analysis details and applications
+def analyze_skills_with_ai(api_key, resume_text, job_text):
+    prompt = f"""
+    You are an expert technical recruiter. Analyze the following Job Description and candidate Resume.
+    Extract the list of required skills from the Job Description, determine which of those skills are matched in the candidate's Resume, and which are missing.
+    Also, calculate a match score from 0 to 100 based on how well the candidate's skills cover the job's required skills.
+    
+    Job Description:
+    {job_text}
+    
+    Candidate Resume:
+    {resume_text}
+    
+    You MUST respond with a raw JSON object ONLY, matching this schema:
+    {{
+        "match_score": 75,
+        "matched_skills": ["Python", "Git", "SQL"],
+        "missing_skills": ["Machine Learning", "Streamlit"],
+        "recommendation": "Short recommendation string...",
+        "resume_suggestions": [
+            {{"skill": "Machine Learning", "bullet": "Suggested resume bullet point showing ML experience..."}}
+        ],
+        "study_plan_week_1": ["Day 1-2 study task", "Day 3-4 study task"],
+        "study_plan_week_2": ["Mini project using X", "Practice Y"]
+    }}
+    Do not include any markdown formatting like ```json or anything else. Just the raw JSON content.
+    """
+    res = call_gemini(api_key, prompt)
+    try:
+        cleaned = clean_json_response(res)
+        return json.loads(cleaned)
+    except Exception as e:
+        st.error(f"Error parsing AI analysis: {e}")
+        return None
+
+def generate_questions_with_ai(api_key, job_text, kb_text):
+    prompt = f"""
+    You are a technical interviewer. Based on the following Job Description and the candidate's Study Notes (Knowledge Base), generate a list of standard interview questions.
+    Provide 5 technical questions based on the job requirements, 3 behavioral/HR questions, and 3 specific questions based on the concepts mentioned in their Study Notes.
+    For each question, provide a brief tip or keywords for a good answer.
+    
+    Job Description:
+    {job_text}
+    
+    Study Notes (Knowledge Base):
+    {kb_text}
+    
+    Respond with a raw JSON object ONLY matching this schema:
+    {{
+        "technical": [
+            {{"question": "Question text...", "tip": "Tip for answering..."}}
+        ],
+        "behavioral": [
+            {{"question": "Question text...", "tip": "Tip for answering..."}}
+        ],
+        "notes_based": [
+            {{"question": "Question text...", "tip": "Tip for answering..."}}
+        ]
+    }}
+    Do not include markdown wrappers. Just raw JSON.
+    """
+    res = call_gemini(api_key, prompt)
+    try:
+        cleaned = clean_json_response(res)
+        return json.loads(cleaned)
+    except Exception as e:
+        st.error(f"Error parsing AI questions: {e}")
+        return None
+
+def generate_cover_letter_with_ai(api_key, resume_text, job_text):
+    prompt = f"""
+    Write a professional and compelling Cover Letter (around 300 words) from the candidate's perspective matching their resume to the job description.
+    Make it feel personalized, highlighting their matching strengths and enthusiasm.
+    
+    Job Description:
+    {job_text}
+    
+    Candidate Resume:
+    {resume_text}
+    
+    Return the cover letter text directly. No extra remarks.
+    """
+    return call_gemini(api_key, prompt)
+
+# --- MAIN GUI FLOW ---
+
+st.write('<div class="banner-title">CareerPrep AI Copilot</div>', unsafe_allow_html=True)
+st.write('<div class="banner-subtitle">An elegant, visual dashboard to match resumes, bridge skill gaps, generate cover letters, and manage job applications.</div>', unsafe_allow_html=True)
+
+# Initialize Session State
 if 'resume_text' not in st.session_state:
     st.session_state.resume_text = ""
 if 'job_text' not in st.session_state:
@@ -239,351 +469,410 @@ if 'kb_text' not in st.session_state:
     st.session_state.kb_text = ""
 if 'applications' not in st.session_state:
     st.session_state.applications = load_applications()
+if 'chat_history' not in st.session_state:
+    st.session_state.chat_history = []
+if 'api_key' not in st.session_state:
+    st.session_state.api_key = load_env_key()
 
-# Sidebar Setup
+# Sidebar Settings
 st.sidebar.image("https://img.icons8.com/clouds/100/000000/find-matching-job.png", width=80)
 st.sidebar.header("Navigation")
 menu = st.sidebar.radio("Go to:", [
-    "🔍 Resume Skill Matcher",
-    "📝 Tailored Suggestion & Study Plan",
+    "🔍 Skill Matcher Hub",
+    "📄 Cover Letter & Study Plan",
     "💡 Interactive Interview Prep",
-    "📊 Application Status Tracker"
+    "📋 Kanban Applications Board"
 ])
 
 st.sidebar.markdown("---")
+st.sidebar.subheader("🤖 AI Settings")
+ai_enabled = st.sidebar.checkbox("Enable Gemini AI Copilot", value=True)
+if ai_enabled:
+    api_key_input = st.sidebar.text_input("Gemini API Key:", value=st.session_state.api_key, type="password")
+    st.session_state.api_key = api_key_input
+    if not api_key_input:
+        st.sidebar.info("💡 Generate a free key from Google AI Studio and enter it above.")
+else:
+    st.sidebar.warning("Running in Offline Keyword Matcher Mode.")
+
+st.sidebar.markdown("---")
 st.sidebar.subheader("Quick Actions")
-if st.sidebar.button("📂 Load Sample/Default Files"):
+if st.sidebar.button("📂 Load Default Sample Data"):
     st.session_state.job_text = get_sample_job()
     st.session_state.resume_text = get_sample_resume()
     st.session_state.kb_text = get_sample_kb()
-    st.sidebar.success("Sample files loaded successfully!")
+    st.sidebar.success("Sample data loaded successfully!")
+    st.rerun()
 
-if st.sidebar.button("🧹 Clear Input Areas"):
+if st.sidebar.button("🧹 Clear Workspace"):
     st.session_state.job_text = ""
     st.session_state.resume_text = ""
     st.session_state.kb_text = ""
-    st.sidebar.warning("All input fields cleared!")
+    st.session_state.chat_history = []
+    st.sidebar.warning("All workspace content cleared!")
+    st.rerun()
 
-# --- MENU: RESUME SKILL MATCHER ---
-if menu == "🔍 Resume Skill Matcher":
-    st.markdown('<div class="section-title">Resume & Job Analysis</div>', unsafe_allow_html=True)
-    
+# --- TAB 1: SKILL MATCHER HUB ---
+if menu == "🔍 Skill Matcher Hub":
+    st.write("### Document Inputs")
     col1, col2 = st.columns(2)
     
     with col1:
-        st.subheader("1. Add Resume")
-        if PYPDF_AVAILABLE:
-            resume_file = st.file_uploader("Upload Resume (.txt, .pdf, .docx, .md)", type=["txt", "pdf", "docx", "md"])
-        else:
-            resume_file = st.file_uploader("Upload Resume (.txt, .docx, .md)", type=["txt", "docx", "md"])
-            st.info("💡 To enable PDF resume parsing, install `pypdf` in your environment: `pip install pypdf`")
+        st.write("#### 📄 Candidate Resume")
+        resume_file = st.file_uploader("Upload Resume:", type=["txt", "pdf", "docx", "md"], key="res_uploader")
         if resume_file is not None:
             st.session_state.resume_text = load_file_content(resume_file)
         
         resume_text_area = st.text_area(
-            "Or Paste Resume Text Here:",
+            "Review/Edit Resume Content:",
             value=st.session_state.resume_text,
-            height=250,
-            key="resume_text_area"
+            height=200,
+            key="res_area"
         )
         st.session_state.resume_text = resume_text_area
 
     with col2:
-        st.subheader("2. Add Job Poster")
-        if PYPDF_AVAILABLE:
-            job_file = st.file_uploader("Upload Job poster (.txt, .pdf, .docx, .md)", type=["txt", "pdf", "docx", "md"])
-        else:
-            job_file = st.file_uploader("Upload Job poster (.txt, .docx, .md)", type=["txt", "docx", "md"])
-            st.info("💡 To enable PDF job description parsing, install `pypdf` in your environment.")
+        st.write("#### 📢 Job Poster Description")
+        job_file = st.file_uploader("Upload Job Description:", type=["txt", "pdf", "docx", "md"], key="job_uploader")
         if job_file is not None:
             st.session_state.job_text = load_file_content(job_file)
         
         job_text_area = st.text_area(
-            "Or Paste Job Poster Text Here:",
+            "Review/Edit Job Requirements:",
             value=st.session_state.job_text,
-            height=250,
-            key="job_text_area"
+            height=200,
+            key="job_area"
         )
         st.session_state.job_text = job_text_area
 
     st.markdown("---")
     
-    if st.button("📊 Run Matching Analysis", type="primary"):
+    if st.button("✨ Run Smart Analysis", type="primary", use_container_width=True):
         if not st.session_state.resume_text.strip() or not st.session_state.job_text.strip():
-            st.error("Please add/upload both your Resume and the Job Description before running the matching analysis.")
+            st.error("Please provide both Resume and Job Description texts.")
         else:
-            # Extract skills
-            job_skills = extract_keywords(st.session_state.job_text)
-            resume_skills = extract_keywords(st.session_state.resume_text)
-            matched, missing, score = compare_skills(job_skills, resume_skills)
+            with st.spinner("Analyzing matching score..."):
+                if ai_enabled and st.session_state.api_key:
+                    # Run AI Semantic match
+                    res_json = analyze_skills_with_ai(st.session_state.api_key, st.session_state.resume_text, st.session_state.job_text)
+                    if res_json:
+                        st.session_state.score = res_json.get("match_score", 0)
+                        st.session_state.matched = res_json.get("matched_skills", [])
+                        st.session_state.missing = res_json.get("missing_skills", [])
+                        st.session_state.recommendation = res_json.get("recommendation", "")
+                        st.session_state.resume_suggestions = res_json.get("resume_suggestions", [])
+                        st.session_state.study_plan_week_1 = res_json.get("study_plan_week_1", [])
+                        st.session_state.study_plan_week_2 = res_json.get("study_plan_week_2", [])
+                        st.session_state.analyzed = True
+                        st.session_state.ai_used = True
+                        st.success("AI Semantic Analysis completed successfully!")
+                        st.rerun()
+                
+                # Local Keyword Matcher Fallback
+                job_skills = extract_keywords(st.session_state.job_text)
+                resume_skills = extract_keywords(st.session_state.resume_text)
+                matched, missing, score = compare_skills(job_skills, resume_skills)
+                st.session_state.score = score
+                st.session_state.matched = matched
+                st.session_state.missing = missing
+                st.session_state.recommendation = "Offline matching based on keyword overlap."
+                st.session_state.resume_suggestions = [{"skill": skill, "bullet": f"Describe python-based application involving {skill}."} for skill in missing]
+                st.session_state.study_plan_week_1 = [f"Study fundamentals of {skill}." for skill in missing[:4]]
+                st.session_state.study_plan_week_2 = ["Work on coding templates.", "Publish source files to GitHub."]
+                st.session_state.analyzed = True
+                st.session_state.ai_used = False
+                st.success("Local Keyword Analysis completed successfully!")
+                st.rerun()
 
-            # Store in session state for other pages
-            st.session_state.job_skills = job_skills
-            st.session_state.resume_skills = resume_skills
-            st.session_state.matched = matched
-            st.session_state.missing = missing
-            st.session_state.score = score
-            st.session_state.analyzed = True
-            
-            st.success("Analysis Complete!")
-
-    # Display Analysis Results
+    # RENDER ANALYSIS SCREEN
     if st.session_state.get('analyzed', False):
         score = st.session_state.score
         matched = st.session_state.matched
         missing = st.session_state.missing
-        job_skills = st.session_state.job_skills
+        recommendation = st.session_state.recommendation
         
-        st.markdown('<div class="section-title">Analysis Results</div>', unsafe_allow_html=True)
+        st.write('<div class="section-title">Analysis Dashboard</div>', unsafe_allow_html=True)
         
-        # Display Score Card
-        score_col, recommendation_col = st.columns([1, 2])
-        with score_col:
+        col_g1, col_g2 = st.columns([1, 2])
+        
+        with col_g1:
+            st.markdown("#### Match Score")
+            # Draw beautiful Conic Gradient Progress Circle
+            gauge_color = "#10b981" if score >= 70 else "#f59e0b" if score >= 40 else "#ef4444"
             st.markdown(f"""
-            <div class="metric-card">
-                <h3>Match Score</h3>
-                <h1 style="color: {'#2e7d32' if score >= 70 else '#f57c00' if score >= 40 else '#c62828'}; font-size: 54px;">{score}%</h1>
+            <div class="gauge-wrapper">
+                <div class="radial-gauge" style="background: conic-gradient({gauge_color} {score}%, #e5e7eb 0);">
+                    <div class="gauge-inner-circle">
+                        <p class="gauge-percentage">{int(score)}%</p>
+                        <p class="gauge-label">Match</p>
+                    </div>
+                </div>
             </div>
             """, unsafe_allow_html=True)
             
-        with recommendation_col:
-            st.subheader("Recommendation")
+        with col_g2:
+            st.markdown("#### Recruiter Insights")
             if score >= 70:
-                st.success("🌟 **Strong Match!** You have most of the skills required for this job. Apply with confidence.")
+                st.success(f"🌟 **Excellent Compatibility!**\n{recommendation}")
             elif score >= 40:
-                st.warning("⚠️ **Moderate Match.** You have a solid base, but there are important missing skills. We recommend updating your resume or studying the missing areas first.")
+                st.warning(f"⚠️ **Moderate Compatibility.**\n{recommendation}")
             else:
-                st.error("❌ **Weak Match.** There are significant skill gaps. Consider targeting a different role or taking time to develop the required skills.")
+                st.error(f"❌ **Low Compatibility.**\n{recommendation}")
                 
-            st.write(f"**Skills required by job poster**: {len(job_skills)}")
-            st.write(f"**Matched skills**: {len(matched)}")
-            st.write(f"**Missing skills**: {len(missing)}")
+            st.write(f"**Analysis Method**: {'🧠 Gemini AI Semantic Parser' if st.session_state.get('ai_used', False) else '🔌 Local Keyword Scraper'}")
 
-        # Display skills side by side
-        col_matched, col_missing = st.columns(2)
-        with col_matched:
-            st.subheader(f"Matched Skills ({len(matched)})")
+        st.markdown("---")
+        
+        col_tags1, col_tags2 = st.columns(2)
+        with col_tags1:
+            st.write(f"🟢 **Matched Competencies ({len(matched)})**")
             if matched:
-                matched_html = "".join([f'<span class="skill-tag skill-matched">✓ {skill}</span>' for skill in matched])
-                st.markdown(matched_html, unsafe_allow_html=True)
+                badges = "".join([f'<span class="badge badge-matched">✓ {skill}</span>' for skill in matched])
+                st.markdown(badges, unsafe_allow_html=True)
             else:
-                st.info("No matching skills found in the resume.")
-                
-        with col_missing:
-            st.subheader(f"Missing Skills ({len(missing)})")
+                st.info("No matching skills identified.")
+        with col_tags2:
+            st.write(f"🔴 **Skill Gaps ({len(missing)})**")
             if missing:
-                missing_html = "".join([f'<span class="skill-tag skill-missing">✗ {skill}</span>' for skill in missing])
-                st.markdown(missing_html, unsafe_allow_html=True)
+                badges = "".join([f'<span class="badge badge-missing">✗ {skill}</span>' for skill in missing])
+                st.markdown(badges, unsafe_allow_html=True)
             else:
-                st.success("Excellent! You match all extracted skills.")
+                st.success("Perfect alignment! No skill gaps found.")
 
-# --- MENU: SUGGESTIONS & PREPARATION PLAN ---
-elif menu == "📝 Tailored Suggestion & Study Plan":
-    st.markdown('<div class="section-title">Resume Customization & Prep Plan</div>', unsafe_allow_html=True)
+# --- TAB 2: COVER LETTER & STUDY PLAN ---
+elif menu == "📄 Cover Letter & Study Plan":
+    st.write('<div class="section-title">Resume Suggestions & AI Cover Letter</div>', unsafe_allow_html=True)
     
     if not st.session_state.get('analyzed', False):
-        st.info("Please perform a matching analysis in the **🔍 Resume Skill Matcher** tab to generate suggestions and plans.")
+        st.info("Run the **Skill Matcher Hub** analysis first to unlock study roadmaps and tailored cover letters.")
     else:
-        job_skills = st.session_state.job_skills
-        missing = st.session_state.missing
-        score = st.session_state.score
+        tab_bullets, tab_letter, tab_schedule = st.tabs(["💡 Tailored Bullets", "✍️ AI Cover Letter", "📅 Study Calendar"])
         
-        tab_resume, tab_study = st.tabs(["📄 Resume Bullet Suggestions", "📅 Study & Prep Planner"])
-        
-        with tab_resume:
-            st.subheader("Tailored Resume Suggestions")
-            st.write("We recommend modifying your resume to highlight experience or knowledge in the required skills. Here are suggested bullet points you can customize and add:")
-            
-            suggestions = [
-                ("Python", "Built Python-based ML project with data preprocessing and model evaluation."),
-                ("GitHub/Git", "Used GitHub for version control with proper commit history and detailed README documentation."),
-                ("API", "Developed a REST API integration project using Python requests library."),
-                ("Prompt Engineering", "Applied prompt engineering to build a Streamlit AI demo application."),
-                ("SQL/Database", "Queried and managed databases using SQL with complex JOIN operations.")
-            ]
-            
-            for skill, suggestion in suggestions:
-                # Highlight if skill is required
-                is_req = any(s in skill.lower() for s in job_skills)
-                is_missing = any(s in skill.lower() for s in missing)
+        with tab_bullets:
+            st.write("#### Recommended Resume Changes")
+            st.write("Incorporate these tailored statements to target missing requirements:")
+            for item in st.session_state.resume_suggestions:
+                st.markdown(f"**{item.get('skill', 'Requirement')}**:")
+                st.info(f"💡 *{item.get('bullet')}*")
                 
-                status_bullet = ""
-                if is_req:
-                    status_bullet = "⚠️ (Missing)" if is_missing else "✅ (Matched)"
-                    
-                st.markdown(f"**{skill}** {status_bullet}:")
-                st.info(suggestion)
-                
-            if missing:
-                st.markdown("### 🛠️ Skills to Develop before applying/interviewing:")
-                for skill in missing:
-                    st.markdown(f"- **{skill.title()}**: Practice concepts, build a mini-project, or complete short online tutorials.")
+        with tab_letter:
+            st.write("#### Generated Cover Letter")
+            if not ai_enabled or not st.session_state.api_key:
+                st.warning("Cover letter generator requires **Gemini AI Copilot** to be enabled in the sidebar.")
+            else:
+                if st.button("📝 Draft Cover Letter", type="primary"):
+                    with st.spinner("Drafting cover letter..."):
+                        letter = generate_cover_letter_with_ai(st.session_state.api_key, st.session_state.resume_text, st.session_state.job_text)
+                        st.session_state.cover_letter = letter
+                        
+                if 'cover_letter' in st.session_state:
+                    st.text_area("Tailored Cover Letter Content:", value=st.session_state.cover_letter, height=350)
+                    st.download_button("Download Cover Letter (.txt)", st.session_state.cover_letter, file_name="cover_letter.txt")
 
-        with tab_study:
-            st.subheader(f"Weekly Preparation Plan (Current Score: {score}%)")
-            st.write("Follow this structured plan to address your skill gaps and prepare for the role:")
-            
-            col_plan_1, col_plan_2 = st.columns(2)
-            with col_plan_1:
-                st.markdown("#### 📅 Week 1: Target Skill Gaps")
-                if missing:
-                    for i, skill in enumerate(missing[:4], 1):
-                        st.markdown(f"- **Day {i*2-1} to {i*2}**: Study and practice **{skill.upper()}**.")
-                else:
-                    st.markdown("- You have no major skill gaps! Use this week to review advanced concepts or review your project code.")
-                    
-            with col_plan_2:
-                st.markdown("#### 📅 Week 2: Apply & Practice")
-                st.markdown("- Work on a mini-project combining your top skills.")
-                st.markdown("- Push your code to GitHub with a clear, readable README.")
-                st.markdown("- Practice explaining your project architecture and choices out loud.")
-                
-            st.markdown("---")
-            st.markdown("#### 📋 Final Checklist Before Interview")
-            st.checkbox("Review technical questions generated in the 'Interview Prep' tab.", value=False)
-            st.checkbox("Prepare behavioral answers using the STAR technique (Situation, Task, Action, Result).", value=False)
-            st.checkbox("Research the company's background, core business, and culture.", value=False)
+        with tab_schedule:
+            st.write("#### Weekly Study Roadmaps")
+            col_s1, col_s2 = st.columns(2)
+            with col_s1:
+                st.markdown("##### 📅 Week 1: Core Gaps")
+                for task in st.session_state.study_plan_week_1:
+                    st.markdown(f"- {task}")
+            with col_s2:
+                st.markdown("##### 📅 Week 2: Build & Practice")
+                for task in st.session_state.study_plan_week_2:
+                    st.markdown(f"- {task}")
 
-# --- MENU: INTERVIEW PREP ---
+# --- TAB 3: INTERVIEW PREP ---
 elif menu == "💡 Interactive Interview Prep":
-    st.markdown('<div class="section-title">Interview Preparation & Q&A</div>', unsafe_allow_html=True)
+    st.write('<div class="section-title">Interview Q&A Guide & Mock Simulation</div>', unsafe_allow_html=True)
     
     st.subheader("Knowledge Base Study Notes")
-    kb_uploader = st.file_uploader("Upload Study Notes / Knowledge Base (.txt)", type=["txt"])
-    if kb_uploader is not None:
-        st.session_state.kb_text = load_file_content(kb_uploader)
+    kb_file = st.file_uploader("Upload Notes File:", type=["txt"], key="kb_uploader")
+    if kb_file is not None:
+        st.session_state.kb_text = load_file_content(kb_file)
         
-    kb_input = st.text_area("Or Paste Study/Interview Notes here:", value=st.session_state.kb_text, height=150)
+    kb_input = st.text_area("Or Paste study notes:", value=st.session_state.kb_text, height=120)
     st.session_state.kb_text = kb_input
     
     st.markdown("---")
     
     if not st.session_state.get('analyzed', False):
-        st.info("Run the **🔍 Resume Skill Matcher** analysis first to generate technical questions for the required job skills.")
+        st.info("Perform the matching analysis in **Skill Matcher Hub** first.")
     else:
-        job_skills = st.session_state.job_skills
-        kb_text = st.session_state.kb_text
+        mode = st.radio("Choose Mode:", ["📚 Q&A Study Guide", "💬 AI Mock Interviewer"])
         
-        tech_tab, hr_tab, kb_tab = st.tabs(["💻 Technical Questions", "👥 HR & Behavioral", "📚 Notes-Based Questions"])
-        
-        with tech_tab:
-            st.subheader("Technical Questions")
-            st.write("These questions are automatically generated based on the skills extracted from the job poster:")
+        if mode == "📚 Q&A Study Guide":
+            st.write("### Interview Cheat-sheet")
+            if ai_enabled and st.session_state.api_key:
+                if st.button("Generate AI Questions", type="primary"):
+                    with st.spinner("Analyzing requirements..."):
+                        q_json = generate_questions_with_ai(st.session_state.api_key, st.session_state.job_text, st.session_state.kb_text)
+                        if q_json:
+                            st.session_state.questions_technical = q_json.get("technical", [])
+                            st.session_state.questions_behavioral = q_json.get("behavioral", [])
+                            st.session_state.questions_kb = q_json.get("notes_based", [])
+                            st.session_state.questions_generated = True
+                            st.rerun()
             
-            for skill in job_skills:
-                with st.expander(f"Skill: {skill.upper()}", expanded=False):
-                    st.write(f"**Q1:** Explain your understanding and core concepts of **{skill}**.")
-                    st.write(f"**Q2:** Describe a project or instance where you utilized **{skill}** and how it solved a problem.")
-                    
-        with hr_tab:
-            st.subheader("HR and Behavioral Questions")
-            hr_questions = [
-                "Tell me about yourself.",
-                "Why are you interested in this role and company?",
-                "Describe your best project. What went well, and what were the challenges?",
-                "What are your key strengths and weaknesses?",
-                "Where do you see yourself in 3 years?",
-                "Why should we select you over other candidates?"
-            ]
-            for i, q in enumerate(hr_questions, 1):
-                with st.expander(f"Question {i}: {q}", expanded=False):
-                    st.write("💡 *Tip: Answer in the STAR structure (Situation, Task, Action, Result). Highlight your ability to learn quickly and adapt.*")
-                    
-        with kb_tab:
-            st.subheader("Knowledge Base Generated Questions")
-            if not kb_text.strip():
-                st.info("Paste or upload study notes above to extract custom questions from your knowledge base.")
-            else:
-                kb_lines = [line.strip() for line in kb_text.splitlines() if line.strip() and len(line.strip()) > 20]
-                if not kb_lines:
-                    st.write("Your notes are too short. Please add more descriptive content.")
+            # Render fallback/static question lists
+            if not st.session_state.get('questions_generated', False):
+                # Setup basic static lists
+                st.session_state.questions_technical = [{"question": f"How have you used {s} in a project?", "tip": f"Describe a project utilizing {s}."} for s in st.session_state.matched[:5]]
+                st.session_state.questions_behavioral = [
+                    {"question": "Tell me about yourself.", "tip": "Summarize degree, core strengths, and top 2 projects."},
+                    {"question": "Why are you interested in this role?", "tip": "Align your career interest with their job specifications."}
+                ]
+                st.session_state.questions_kb = [{"question": "Summarize key points from notes.", "tip": "Use star method."}]
+            
+            tech_c, hr_c, kb_c = st.tabs(["Technical", "HR / Behavioral", "Notes-Based"])
+            with tech_c:
+                for item in st.session_state.questions_technical:
+                    with st.expander(item.get("question")):
+                        st.info(f"💡 *Answer Tip:* {item.get('tip')}")
+            with hr_c:
+                for item in st.session_state.questions_behavioral:
+                    with st.expander(item.get("question")):
+                        st.info(f"💡 *Answer Tip:* {item.get('tip')}")
+            with kb_c:
+                if not st.session_state.kb_text.strip():
+                    st.info("Paste Study Notes above to generate notes-based questions.")
                 else:
-                    st.write("We extracted the following questions based on key points in your study notes:")
-                    for i, line in enumerate(kb_lines[:8], 1):
-                        with st.expander(f"Question {i} (from notes): How would you explain this concept?", expanded=False):
-                            st.markdown(f"*'{line}'*")
-                            st.write("💡 *Review this note and practice explaining it in your own words.*")
+                    for item in st.session_state.questions_kb:
+                        with st.expander(item.get("question")):
+                            st.info(f"💡 *Answer Tip:* {item.get('tip')}")
 
-# --- MENU: APPLICATION TRACKER ---
-elif menu == "📊 Application Status Tracker":
-    st.markdown('<div class="section-title">Application Status Tracker & Reminders</div>', unsafe_allow_html=True)
+        elif mode == "💬 AI Mock Interviewer":
+            st.write("### AI Chat Simulation")
+            if not ai_enabled or not st.session_state.api_key:
+                st.warning("Chat simulation requires **Gemini AI Copilot** to be enabled.")
+            else:
+                st.write("Interact with the AI Recruiter. It will ask questions and score your answers.")
+                
+                # Render Chat Log
+                for msg in st.session_state.chat_history:
+                    with st.chat_message(msg["role"]):
+                        st.markdown(msg["content"])
+                        
+                user_msg = st.chat_input("Type your response here:")
+                if user_msg:
+                    # Append user message
+                    st.session_state.chat_history.append({"role": "user", "content": user_msg})
+                    with st.chat_message("user"):
+                        st.markdown(user_msg)
+                        
+                    # Create AI context prompt
+                    system_prompt = f"""
+                    You are a friendly technical recruiter conducting a mock interview.
+                    Here is the job description:
+                    {st.session_state.job_text}
+                    Here is the user's resume:
+                    {st.session_state.resume_text}
+                    
+                    Conduct the interview. Ask one concise question at a time.
+                    Evaluate the candidate's last answer, give brief feedback (with a score out of 10), and then ask the next question.
+                    Keep responses under 100 words.
+                    
+                    Chat History:
+                    {st.session_state.chat_history}
+                    """
+                    with st.spinner("AI is thinking..."):
+                        reply = call_gemini(st.session_state.api_key, system_prompt)
+                        st.session_state.chat_history.append({"role": "assistant", "content": reply})
+                        st.rerun()
+
+# --- TAB 4: KANBAN APPLICATIONS BOARD ---
+elif menu == "📋 Kanban Applications Board":
+    st.write('<div class="section-title">Interactive Kanban Board</div>', unsafe_allow_html=True)
     
     df_apps = st.session_state.applications
     
-    col_t1, col_t2 = st.columns([2, 1])
+    # Kanban Columns Setup
+    stages = ["Not Applied", "Applied", "Interview Scheduled", "Offer Received", "Closed"]
     
-    with col_t2:
-        st.subheader("🔔 Reminders & Action Items")
-        today_date = date.today()
-        
-        reminders_found = False
-        for idx, row in df_apps.iterrows():
-            status = str(row.get("status", "")).lower()
-            company = row.get("company", "")
-            role = row.get("role", "")
+    # Render Columns side by side
+    cols = st.columns(len(stages))
+    
+    for idx, stage in enumerate(stages):
+        with cols[idx]:
+            # CSS colored header
+            header_color = "#6b7280" if stage == "Closed" else "#10b981" if stage == "Offer Received" else "#ef4444" if stage == "Not Applied" else "#3b82f6"
+            st.markdown(f"""
+            <div style="background: {header_color}; padding: 8px; border-radius: 8px 8px 0 0; text-align: center;">
+                <p style="color: white; margin: 0; font-weight: 700; font-size: 13px; text-transform: uppercase;">{stage}</p>
+            </div>
+            """, unsafe_allow_html=True)
             
-            if status == "interview scheduled" and row.get("interview_date"):
-                st.error(f"🚨 **Interview scheduled** at **{company}** for **{role}** on **{row.get('interview_date')}**!\nAction: {row.get('next_action', 'Prepare!')}")
-                reminders_found = True
-            elif status == "applied" and row.get("follow_up_date"):
-                st.warning(f"📅 Follow up with **{company}** (**{role}**) on **{row.get('follow_up_date')}**.")
-                reminders_found = True
-            elif status == "not applied":
-                st.info(f"✍️ Tailor resume and apply for **{role}** at **{company}**.")
-                reminders_found = True
-                
-        if not reminders_found:
-            st.success("All caught up! No critical upcoming interview or follow-up reminders.")
+            # Kanban Column Box
+            st.markdown('<div class="kanban-col">', unsafe_allow_html=True)
             
-    with col_t1:
-        st.subheader("Job Applications Log")
-        st.write("Directly edit the tracker table below or use the form to append a new application. Changes are saved back to your files.")
-        
-        # Display editable data editor
-        edited_df = st.data_editor(
-            df_apps, 
-            num_rows="dynamic",
-            key="tracker_editor",
-            height=300
-        )
-        
-        # Save modifications
-        if st.button("💾 Save Tracker Changes"):
-            if save_applications(edited_df):
-                st.session_state.applications = edited_df
-                st.success("Tracker updated and saved successfully!")
-                st.rerun()
-
+            # Filter rows
+            stage_apps = df_apps[df_apps['status'] == stage]
+            
+            if len(stage_apps) == 0:
+                st.markdown("<p style='font-size:12px; color:#9ca3af; text-align:center; padding-top:20px;'>Empty</p>", unsafe_allow_html=True)
+            else:
+                for _, row in stage_apps.iterrows():
+                    app_id = row['application_id']
+                    company = row['company']
+                    role = row['role']
+                    next_act = row.get('next_action', '')
+                    
+                    st.markdown(f"""
+                    <div class="kanban-card">
+                        <div class="kanban-card-title">{role}</div>
+                        <div class="kanban-card-sub">{company}</div>
+                        {f'<div class="kanban-card-action">Action: {next_act}</div>' if next_act else ''}
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # Navigation arrow buttons
+                    btn_prev, btn_next = st.columns(2)
+                    with btn_prev:
+                        if idx > 0:
+                            if st.button(f"◀ Move", key=f"prev_{app_id}_{idx}", use_container_width=True):
+                                # Update status
+                                df_apps.loc[df_apps['application_id'] == app_id, 'status'] = stages[idx-1]
+                                save_applications(df_apps)
+                                st.session_state.applications = df_apps
+                                st.rerun()
+                    with btn_next:
+                        if idx < len(stages) - 1:
+                            if st.button(f"Move ▶", key=f"next_{app_id}_{idx}", use_container_width=True):
+                                # Update status
+                                df_apps.loc[df_apps['application_id'] == app_id, 'status'] = stages[idx+1]
+                                save_applications(df_apps)
+                                st.session_state.applications = df_apps
+                                st.rerun()
+                                
+            st.markdown('</div>', unsafe_allow_html=True)
+            
     st.markdown("---")
     
     # Form to add new application
-    st.subheader("➕ Add New Application")
-    with st.form("new_app_form", clear_on_submit=True):
-        col_f1, col_f2 = st.columns(2)
-        with col_f1:
-            company = st.text_input("Company Name")
-            role = st.text_input("Job Role / Position")
-            source = st.text_input("Source (e.g. LinkedIn, Rozee.pk, Website)")
-            status = st.selectbox("Status", ["Not Applied", "Applied", "Interview Scheduled", "Offer Received", "Rejected"])
-            
-        with col_f2:
-            applied_date = st.date_input("Applied Date", value=None)
-            interview_date = st.date_input("Interview Date", value=None)
-            follow_up_date = st.date_input("Follow-up Date", value=None)
-            next_action = st.text_input("Next Action Item")
-            
-        notes = st.text_area("Notes")
+    st.subheader("➕ Create Application Card")
+    with st.form("kanban_new_form", clear_on_submit=True):
+        col_kf1, col_kf2 = st.columns(2)
+        with col_kf1:
+            company_k = st.text_input("Company Name")
+            role_k = st.text_input("Job Role")
+            source_k = st.text_input("Source (e.g. LinkedIn)")
+            status_k = st.selectbox("Status", stages)
+        with col_kf2:
+            applied_k = st.date_input("Applied Date", value=None)
+            interview_k = st.date_input("Interview Date", value=None)
+            followup_k = st.date_input("Follow-up Date", value=None)
+            action_k = st.text_input("Next Action Item")
+        notes_k = st.text_area("Notes")
         
-        submit_btn = st.form_submit_button("Add Application")
-        if submit_btn:
-            if not company or not role:
+        submit_k = st.form_submit_button("Add Application Card")
+        if submit_k:
+            if not company_k or not role_k:
                 st.error("Company Name and Job Role are required.")
             else:
-                # Generate new ID
+                # Generate APP-ID
                 if len(df_apps) > 0:
                     try:
-                        last_id_num = max(df_apps['application_id'].apply(lambda x: int(x.split('-')[1]) if '-' in str(x) else 0))
-                        new_id = f"APP-{str(last_id_num + 1).zfill(3)}"
+                        last_id = max(df_apps['application_id'].apply(lambda x: int(x.split('-')[1]) if '-' in str(x) else 0))
+                        new_id = f"APP-{str(last_id + 1).zfill(3)}"
                     except:
                         new_id = f"APP-{str(len(df_apps) + 1).zfill(3)}"
                 else:
@@ -591,45 +880,30 @@ elif menu == "📊 Application Status Tracker":
                     
                 new_row = {
                     "application_id": new_id,
-                    "company": company,
-                    "role": role,
-                    "source": source,
-                    "status": status,
-                    "applied_date": applied_date.strftime("%Y-%m-%d") if applied_date else "",
-                    "interview_date": interview_date.strftime("%Y-%m-%d") if interview_date else "",
-                    "follow_up_date": follow_up_date.strftime("%Y-%m-%d") if follow_up_date else "",
-                    "next_action": next_action,
-                    "notes": notes
+                    "company": company_k,
+                    "role": role_k,
+                    "source": source_k,
+                    "status": status_k,
+                    "applied_date": applied_k.strftime("%Y-%m-%d") if applied_k else "",
+                    "interview_date": interview_k.strftime("%Y-%m-%d") if interview_k else "",
+                    "follow_up_date": followup_k.strftime("%Y-%m-%d") if followup_k else "",
+                    "next_action": action_k,
+                    "notes": notes_k
                 }
                 
-                updated_df = pd.concat([df_apps, pd.DataFrame([new_row])], ignore_index=True)
-                if save_applications(updated_df):
-                    st.session_state.applications = updated_df
-                    st.success(f"Added new application {new_id} successfully!")
+                df_apps = pd.concat([df_apps, pd.DataFrame([new_row])], ignore_index=True)
+                if save_applications(df_apps):
+                    st.session_state.applications = df_apps
+                    st.success(f"Added application card {new_id} successfully!")
                     st.rerun()
 
-    # Import / Export panel
+    # Log editor & Export panel
     st.markdown("---")
-    st.subheader("📥 Import / Export Tracker Data")
-    col_csv1, col_csv2 = st.columns(2)
-    with col_csv1:
-        st.write("Export your active tracker file to CSV:")
-        csv_data = df_apps.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="⬇️ Download applications.csv",
-            data=csv_data,
-            file_name="applications.csv",
-            mime="text/csv"
-        )
-    with col_csv2:
-        st.write("Upload a different tracker CSV to restore progress:")
-        uploaded_csv = st.file_uploader("Upload CSV file", type=["csv"])
-        if uploaded_csv is not None:
-            try:
-                uploaded_df = pd.read_csv(uploaded_csv)
-                if save_applications(uploaded_df):
-                    st.session_state.applications = uploaded_df
-                    st.success("Uploaded CSV applied successfully!")
-                    st.rerun()
-            except Exception as e:
-                st.error(f"Error parsing uploaded CSV: {e}")
+    st.subheader("📥 Export Application Log")
+    csv_data = df_apps.to_csv(index=False).encode('utf-8')
+    st.download_button(
+        label="⬇️ Download applications.csv",
+        data=csv_data,
+        file_name="applications.csv",
+        mime="text/csv"
+    )
