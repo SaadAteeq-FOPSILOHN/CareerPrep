@@ -1,6 +1,15 @@
 import os
 import csv
+import zipfile
+import xml.etree.ElementTree as ET
 from datetime import datetime, date
+
+# --- CONDITIONAL PDF IMPORT ---
+try:
+    from pypdf import PdfReader
+    PYPDF_AVAILABLE = True
+except ImportError:
+    PYPDF_AVAILABLE = False
 
 JOB_DIR = "input_jobs"
 RESUME_DIR = "input_resumes"
@@ -19,16 +28,66 @@ def ensure_folders():
     for folder in [JOB_DIR, RESUME_DIR, KB_DIR, OUTPUT_DIR, TRACKER_DIR]:
         os.makedirs(folder, exist_ok=True)
 
+def extract_text_from_pdf(filepath):
+    if not PYPDF_AVAILABLE:
+        print(f"WARNING: Cannot parse {os.path.basename(filepath)} because 'pypdf' is not installed.")
+        return ""
+    try:
+        reader = PdfReader(filepath)
+        text = ""
+        for page in reader.pages:
+            page_text = page.extract_text()
+            if page_text:
+                text += page_text + "\n"
+        return text
+    except Exception as e:
+        print(f"ERROR parsing PDF file {os.path.basename(filepath)}: {e}")
+        return ""
+
+def extract_text_from_docx(filepath):
+    try:
+        with zipfile.ZipFile(filepath) as docx:
+            xml_content = docx.read('word/document.xml')
+            root = ET.fromstring(xml_content)
+            namespaces = {'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}
+            
+            paragraphs = []
+            for p_node in root.findall('.//w:p', namespaces):
+                text_runs = []
+                for t_node in p_node.findall('.//w:t', namespaces):
+                    if t_node.text:
+                        text_runs.append(t_node.text)
+                if text_runs:
+                    paragraphs.append("".join(text_runs))
+            return "\n".join(paragraphs)
+    except Exception as e:
+        print(f"ERROR parsing DOCX file {os.path.basename(filepath)}: {e}")
+        return ""
+
 def read_text_files(folder):
     combined_text = ""
     file_count = 0
+    if not os.path.exists(folder):
+        return combined_text, file_count
     for filename in os.listdir(folder):
-        if filename.lower().endswith(".txt"):
-            path = os.path.join(folder, filename)
-            with open(path, "r", encoding="utf-8") as file:
-                combined_text += f"\n\n--- FILE: {filename} ---\n"
-                combined_text += file.read()
-                file_count += 1
+        name_lower = filename.lower()
+        path = os.path.join(folder, filename)
+        content = ""
+        if name_lower.endswith(".txt") or name_lower.endswith(".md"):
+            try:
+                with open(path, "r", encoding="utf-8") as file:
+                    content = file.read()
+            except Exception as e:
+                print(f"ERROR reading file {filename}: {e}")
+        elif name_lower.endswith(".pdf"):
+            content = extract_text_from_pdf(path)
+        elif name_lower.endswith(".docx"):
+            content = extract_text_from_docx(path)
+            
+        if content:
+            combined_text += f"\n\n--- FILE: {filename} ---\n"
+            combined_text += content
+            file_count += 1
     return combined_text, file_count
 
 def save_text(path, content):

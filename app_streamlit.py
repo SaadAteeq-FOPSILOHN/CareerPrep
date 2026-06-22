@@ -1,6 +1,8 @@
 import os
 import csv
 import io
+import zipfile
+import xml.etree.ElementTree as ET
 from datetime import datetime, date
 import pandas as pd
 import streamlit as st
@@ -109,11 +111,34 @@ def extract_text_from_pdf(file):
         st.error(f"Error parsing PDF file: {e}")
         return ""
 
+def extract_text_from_docx(file):
+    try:
+        with zipfile.ZipFile(file) as docx:
+            xml_content = docx.read('word/document.xml')
+            root = ET.fromstring(xml_content)
+            namespaces = {'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}
+            
+            paragraphs = []
+            for p_node in root.findall('.//w:p', namespaces):
+                text_runs = []
+                for t_node in p_node.findall('.//w:t', namespaces):
+                    if t_node.text:
+                        text_runs.append(t_node.text)
+                if text_runs:
+                    paragraphs.append("".join(text_runs))
+            return "\n".join(paragraphs)
+    except Exception as e:
+        st.error(f"Error parsing DOCX file: {e}")
+        return ""
+
 def load_file_content(uploaded_file):
     if uploaded_file is None:
         return ""
-    if uploaded_file.name.lower().endswith(".pdf"):
+    name_lower = uploaded_file.name.lower()
+    if name_lower.endswith(".pdf"):
         return extract_text_from_pdf(uploaded_file)
+    elif name_lower.endswith(".docx"):
+        return extract_text_from_docx(uploaded_file)
     else:
         return uploaded_file.getvalue().decode("utf-8", errors="ignore")
 
@@ -248,9 +273,9 @@ if menu == "🔍 Resume Skill Matcher":
     with col1:
         st.subheader("1. Add Resume")
         if PYPDF_AVAILABLE:
-            resume_file = st.file_uploader("Upload Resume (.txt or .pdf)", type=["txt", "pdf"])
+            resume_file = st.file_uploader("Upload Resume (.txt, .pdf, .docx, .md)", type=["txt", "pdf", "docx", "md"])
         else:
-            resume_file = st.file_uploader("Upload Resume (.txt)", type=["txt"])
+            resume_file = st.file_uploader("Upload Resume (.txt, .docx, .md)", type=["txt", "docx", "md"])
             st.info("💡 To enable PDF resume parsing, install `pypdf` in your environment: `pip install pypdf`")
         if resume_file is not None:
             st.session_state.resume_text = load_file_content(resume_file)
@@ -266,9 +291,9 @@ if menu == "🔍 Resume Skill Matcher":
     with col2:
         st.subheader("2. Add Job Poster")
         if PYPDF_AVAILABLE:
-            job_file = st.file_uploader("Upload Job poster (.txt or .pdf)", type=["txt", "pdf"])
+            job_file = st.file_uploader("Upload Job poster (.txt, .pdf, .docx, .md)", type=["txt", "pdf", "docx", "md"])
         else:
-            job_file = st.file_uploader("Upload Job poster (.txt)", type=["txt"])
+            job_file = st.file_uploader("Upload Job poster (.txt, .docx, .md)", type=["txt", "docx", "md"])
             st.info("💡 To enable PDF job description parsing, install `pypdf` in your environment.")
         if job_file is not None:
             st.session_state.job_text = load_file_content(job_file)
