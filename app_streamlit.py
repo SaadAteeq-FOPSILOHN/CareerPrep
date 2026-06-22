@@ -8,7 +8,6 @@ from datetime import datetime, date
 import pandas as pd
 import requests
 import streamlit as st
-from pypdf import PdfReader
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(
@@ -27,7 +26,7 @@ def load_env_key():
                     return line.strip().split("=", 1)[1]
     return ""
 
-# --- CSS FOR PREMIUM GLASSMORPHISM LOOK ---
+# --- CSS FOR PREMIUM THEME-AWARE LOOK ---
 st.markdown("""
 <style>
     /* Global styles */
@@ -37,26 +36,21 @@ st.markdown("""
         font-family: 'Outfit', sans-serif;
     }
     
-    .stApp {
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-    }
-    
-    /* Premium card layout */
+    /* Premium card layout (Theme Adaptive) */
     .premium-card {
-        background: rgba(255, 255, 255, 0.75);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.4);
+        background-color: var(--secondary-background-color, #ffffff);
+        color: var(--text-color, #1f2937);
+        border: 1px solid rgba(128, 128, 128, 0.2);
         padding: 24px;
         border-radius: 16px;
-        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.08);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
         margin-bottom: 20px;
-        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        transition: all 0.3s ease;
     }
     
     .premium-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.15);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
     }
     
     /* Circular Gauge Widget */
@@ -75,14 +69,14 @@ st.markdown("""
         display: flex;
         justify-content: center;
         align-items: center;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
     }
     
     .gauge-inner-circle {
         position: absolute;
         width: 130px;
         height: 130px;
-        background: white;
+        background: var(--background-color, #ffffff);
         border-radius: 50%;
         display: flex;
         flex-direction: column;
@@ -93,13 +87,14 @@ st.markdown("""
     .gauge-percentage {
         font-size: 36px;
         font-weight: 800;
-        color: #4f46e5;
+        color: var(--text-color, #4f46e5);
         margin: 0;
     }
     
     .gauge-label {
         font-size: 11px;
-        color: #6b7280;
+        color: var(--text-color, #6b7280);
+        opacity: 0.7;
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.5px;
@@ -141,7 +136,8 @@ st.markdown("""
     }
     
     .banner-subtitle {
-        color: #4b5563;
+        color: var(--text-color, #4b5563);
+        opacity: 0.85;
         font-size: 16px;
         margin-bottom: 25px;
         font-weight: 400;
@@ -149,16 +145,16 @@ st.markdown("""
     
     /* Kanban visual board styles */
     .kanban-col {
-        background: rgba(249, 250, 251, 0.6);
-        border: 1px solid rgba(229, 231, 235, 0.5);
+        background: rgba(128, 128, 128, 0.08);
+        border: 1px solid rgba(128, 128, 128, 0.15);
         border-radius: 12px;
         padding: 12px;
         min-height: 400px;
     }
     
     .kanban-card {
-        background: white;
-        border: 1px solid #e5e7eb;
+        background: var(--secondary-background-color, #ffffff);
+        border: 1px solid rgba(128, 128, 128, 0.2);
         border-radius: 8px;
         padding: 14px;
         margin-bottom: 10px;
@@ -168,20 +164,21 @@ st.markdown("""
     .kanban-card-title {
         font-weight: 700;
         font-size: 14px;
-        color: #1f2937;
+        color: var(--text-color, #1f2937);
         margin-bottom: 2px;
     }
     
     .kanban-card-sub {
         font-size: 12px;
-        color: #6b7280;
+        color: var(--text-color, #6b7280);
+        opacity: 0.8;
         margin-bottom: 8px;
     }
     
     .kanban-card-action {
         font-size: 11px;
         color: #3b82f6;
-        background: #eff6ff;
+        background: rgba(59, 130, 246, 0.1);
         padding: 4px 8px;
         border-radius: 4px;
         display: inline-block;
@@ -475,7 +472,7 @@ if 'api_key' not in st.session_state:
     st.session_state.api_key = load_env_key()
 
 # Sidebar Settings
-st.sidebar.image("https://img.icons8.com/clouds/100/000000/find-matching-job.png", width=80)
+st.sidebar.markdown("<h2 style='text-align: center; margin-top: -15px;'>💼 CareerPrep</h2>", unsafe_allow_html=True)
 st.sidebar.header("Navigation")
 menu = st.sidebar.radio("Go to:", [
     "🔍 Skill Matcher Hub",
