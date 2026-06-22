@@ -1,0 +1,20 @@
+PREPARATION PLAN
+========================================
+
+Current match score: 66.67%
+
+Week 1 - Focus Areas:
+  Day 1-2: Study and practice machine learning
+  Day 3-4: Study and practice data preprocessing
+  Day 5-6: Study and practice api
+  Day 7-8: Study and practice prompt engineering
+
+Week 2 - Practice:
+  - Work on a mini project combining your top skills
+  - Push the project to GitHub with a clear README
+  - Practice explaining your projects out loud
+
+Before Interview:
+  - Review all technical questions in interview_questions.txt
+  - Prepare STAR format answers for behavioral questions
+  - Research the company and role thoroughly

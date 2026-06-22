@@ -1,0 +1,38 @@
+TAILORED RESUME SUGGESTIONS
+========================================
+
+Improvements based on job requirements:
+
+  - Add clear evidence of python in your resume.
+  - Add clear evidence of machine learning in your resume.
+  - Add clear evidence of data preprocessing in your resume.
+  - Add clear evidence of github in your resume.
+  - Add clear evidence of git in your resume.
+  - Add clear evidence of api in your resume.
+  - Add clear evidence of prompt engineering in your resume.
+  - Add clear evidence of sql in your resume.
+  - Add clear evidence of communication in your resume.
+  - Add clear evidence of problem solving in your resume.
+  - Add clear evidence of oop in your resume.
+  - Add clear evidence of database in your resume.
+  - Add clear evidence of jupyter in your resume.
+  - Add clear evidence of pandas in your resume.
+  - Add clear evidence of numpy in your resume.
+  - Add clear evidence of deep learning in your resume.
+  - Add clear evidence of flask in your resume.
+  - Add clear evidence of streamlit in your resume.
+
+Suggested resume bullet points:
+  - Built Python-based ML project with data preprocessing and model evaluation.
+  - Used GitHub for version control with proper commit history and README.
+  - Developed a REST API integration project using Python requests library.
+  - Applied prompt engineering to build a Streamlit AI demo application.
+  - Queried and managed databases using SQL with complex JOIN operations.
+
+Skills to develop before interview:
+  - Study and practice: machine learning
+  - Study and practice: data preprocessing
+  - Study and practice: api
+  - Study and practice: prompt engineering
+  - Study and practice: deep learning
+  - Study and practice: streamlit

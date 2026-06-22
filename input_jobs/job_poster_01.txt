@@ -1,0 +1,27 @@
+Junior AI Engineer Intern
+Company: ABC Tech Solutions
+Location: Lahore, Pakistan
+Source: LinkedIn
+
+Requirements:
+- Python programming
+- Machine learning basics
+- Data preprocessing
+- GitHub and Git version control
+- API integration
+- Prompt engineering
+- SQL database knowledge
+- Communication skills
+- Problem solving
+- OOP concepts
+- Pandas and NumPy
+- Jupyter Notebook
+- Deep learning basics
+- Streamlit or Flask
+
+Responsibilities:
+- Build and test AI/ML models
+- Work with datasets and preprocessing pipelines
+- Collaborate with team using GitHub
+- Document code and write clear READMEs
+- Support senior engineers with research tasks

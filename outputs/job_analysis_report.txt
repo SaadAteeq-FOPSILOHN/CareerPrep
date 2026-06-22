@@ -1,0 +1,26 @@
+JOB ANALYSIS REPORT
+========================================
+
+Generated: 2026-06-23 01:04
+
+Skills and keywords found in job poster:
+  - python
+  - machine learning
+  - data preprocessing
+  - github
+  - git
+  - api
+  - prompt engineering
+  - sql
+  - communication
+  - problem solving
+  - oop
+  - database
+  - jupyter
+  - pandas
+  - numpy
+  - deep learning
+  - flask
+  - streamlit
+
+Total skills required: 18

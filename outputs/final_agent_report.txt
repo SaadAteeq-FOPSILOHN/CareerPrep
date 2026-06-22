@@ -1,0 +1,216 @@
+CAREERPREP JOB-HUNTING AGENT - FINAL REPORT
+==================================================
+Generated: 2026-06-23 01:04:52.644185
+
+JOB ANALYSIS REPORT
+========================================
+
+Generated: 2026-06-23 01:04
+
+Skills and keywords found in job poster:
+  - python
+  - machine learning
+  - data preprocessing
+  - github
+  - git
+  - api
+  - prompt engineering
+  - sql
+  - communication
+  - problem solving
+  - oop
+  - database
+  - jupyter
+  - pandas
+  - numpy
+  - deep learning
+  - flask
+  - streamlit
+
+Total skills required: 18
+
+SKILL GAP REPORT
+========================================
+
+Match Score: 66.67%
+
+Matched Skills (12):
+  [OK] python
+  [OK] github
+  [OK] git
+  [OK] sql
+  [OK] communication
+  [OK] problem solving
+  [OK] oop
+  [OK] database
+  [OK] jupyter
+  [OK] pandas
+  [OK] numpy
+  [OK] flask
+
+Missing Skills (6):
+  [MISSING] machine learning
+  [MISSING] data preprocessing
+  [MISSING] api
+  [MISSING] prompt engineering
+  [MISSING] deep learning
+  [MISSING] streamlit
+
+Recommendation:
+  Moderate match. Work on missing skills before applying.
+
+TAILORED RESUME SUGGESTIONS
+========================================
+
+Improvements based on job requirements:
+
+  - Add clear evidence of python in your resume.
+  - Add clear evidence of machine learning in your resume.
+  - Add clear evidence of data preprocessing in your resume.
+  - Add clear evidence of github in your resume.
+  - Add clear evidence of git in your resume.
+  - Add clear evidence of api in your resume.
+  - Add clear evidence of prompt engineering in your resume.
+  - Add clear evidence of sql in your resume.
+  - Add clear evidence of communication in your resume.
+  - Add clear evidence of problem solving in your resume.
+  - Add clear evidence of oop in your resume.
+  - Add clear evidence of database in your resume.
+  - Add clear evidence of jupyter in your resume.
+  - Add clear evidence of pandas in your resume.
+  - Add clear evidence of numpy in your resume.
+  - Add clear evidence of deep learning in your resume.
+  - Add clear evidence of flask in your resume.
+  - Add clear evidence of streamlit in your resume.
+
+Suggested resume bullet points:
+  - Built Python-based ML project with data preprocessing and model evaluation.
+  - Used GitHub for version control with proper commit history and README.
+  - Developed a REST API integration project using Python requests library.
+  - Applied prompt engineering to build a Streamlit AI demo application.
+  - Queried and managed databases using SQL with complex JOIN operations.
+
+Skills to develop before interview:
+  - Study and practice: machine learning
+  - Study and practice: data preprocessing
+  - Study and practice: api
+  - Study and practice: prompt engineering
+  - Study and practice: deep learning
+  - Study and practice: streamlit
+
+INTERVIEW QUESTIONS
+========================================
+
+Technical Questions (from job requirements):
+  Q: Explain your understanding of python.
+  Q: How have you used python in a project?
+
+  Q: Explain your understanding of machine learning.
+  Q: How have you used machine learning in a project?
+
+  Q: Explain your understanding of data preprocessing.
+  Q: How have you used data preprocessing in a project?
+
+  Q: Explain your understanding of github.
+  Q: How have you used github in a project?
+
+  Q: Explain your understanding of git.
+  Q: How have you used git in a project?
+
+  Q: Explain your understanding of api.
+  Q: How have you used api in a project?
+
+  Q: Explain your understanding of prompt engineering.
+  Q: How have you used prompt engineering in a project?
+
+  Q: Explain your understanding of sql.
+  Q: How have you used sql in a project?
+
+  Q: Explain your understanding of communication.
+  Q: How have you used communication in a project?
+
+  Q: Explain your understanding of problem solving.
+  Q: How have you used problem solving in a project?
+
+  Q: Explain your understanding of oop.
+  Q: How have you used oop in a project?
+
+  Q: Explain your understanding of database.
+  Q: How have you used database in a project?
+
+  Q: Explain your understanding of jupyter.
+  Q: How have you used jupyter in a project?
+
+  Q: Explain your understanding of pandas.
+  Q: How have you used pandas in a project?
+
+  Q: Explain your understanding of numpy.
+  Q: How have you used numpy in a project?
+
+  Q: Explain your understanding of deep learning.
+  Q: How have you used deep learning in a project?
+
+  Q: Explain your understanding of flask.
+  Q: How have you used flask in a project?
+
+  Q: Explain your understanding of streamlit.
+  Q: How have you used streamlit in a project?
+
+
+HR and Behavioral Questions:
+  Q: Tell me about yourself.
+  Q: Why are you interested in this role?
+  Q: Describe your best project.
+  Q: What are your strengths and weaknesses?
+  Q: Where do you see yourself in 3 years?
+  Q: Why should we select you over other candidates?
+
+Questions from Knowledge Base:
+  Q: How would you explain this in an interview: '--- FILE: interview_notes.txt ---'
+  Q: How would you explain this in an interview: 'Interview Preparation Notes'
+  Q: How would you explain this in an interview: 'Python is a high-level interpreted language. Key concepts include variables, loo'
+  Q: How would you explain this in an interview: 'Machine learning is a subset of AI where models learn from data. Key types are s'
+  Q: How would you explain this in an interview: 'Data preprocessing includes handling missing values, normalization, encoding cat'
+  Q: How would you explain this in an interview: 'GitHub is a platform for version control using Git. Key commands: git init, git '
+  Q: How would you explain this in an interview: 'An API is an Application Programming Interface. REST APIs use HTTP methods GET, '
+  Q: How would you explain this in an interview: 'Prompt engineering is the practice of designing effective inputs for large langu'
+
+PREPARATION PLAN
+========================================
+
+Current match score: 66.67%
+
+Week 1 - Focus Areas:
+  Day 1-2: Study and practice machine learning
+  Day 3-4: Study and practice data preprocessing
+  Day 5-6: Study and practice api
+  Day 7-8: Study and practice prompt engineering
+
+Week 2 - Practice:
+  - Work on a mini project combining your top skills
+  - Push the project to GitHub with a clear README
+  - Practice explaining your projects out loud
+
+Before Interview:
+  - Review all technical questions in interview_questions.txt
+  - Prepare STAR format answers for behavioral questions
+  - Research the company and role thoroughly
+
+APPLICATION REMINDERS
+========================================
+
+Generated: 2026-06-23 01:04
+
+[APP-001] Junior AI Engineer Intern at ABC Tech Solutions
+  Status: Interview Scheduled
+  *** INTERVIEW on 2026-05-03 ***
+  Action: Revise Python, ML basics, and prepare project explanations
+
+[APP-002] AI Research Intern at DataSoft Pakistan
+  Status: Applied
+  Follow up on: 2026-05-04
+
+[APP-003] ML Intern at TechVentures
+  Status: Not Applied
+  TODO: Tailor resume and apply soon.
+

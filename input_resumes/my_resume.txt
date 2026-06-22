@@ -1,0 +1,28 @@
+Name: Saad Ateeq
+Degree: BS Computer Science
+University: COMSATS University
+
+Skills:
+- Python
+- GitHub and Git
+- OOP
+- Pandas
+- NumPy
+- Jupyter Notebook
+- Problem solving
+- Communication
+- HTML and CSS
+- SQL basics
+
+Projects:
+- Student Grade Calculator using Python and OOP
+- Data Analysis project using Pandas and NumPy in Jupyter
+- Basic Flask web application with HTML and CSS frontend
+- GitHub repository management and README documentation
+
+Courses Completed:
+- Programming Fundamentals
+- Object Oriented Programming
+- Database Systems
+- Web Technologies
+- Introduction to AI

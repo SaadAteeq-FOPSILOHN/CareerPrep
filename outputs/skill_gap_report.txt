@@ -1,0 +1,29 @@
+SKILL GAP REPORT
+========================================
+
+Match Score: 66.67%
+
+Matched Skills (12):
+  [OK] python
+  [OK] github
+  [OK] git
+  [OK] sql
+  [OK] communication
+  [OK] problem solving
+  [OK] oop
+  [OK] database
+  [OK] jupyter
+  [OK] pandas
+  [OK] numpy
+  [OK] flask
+
+Missing Skills (6):
+  [MISSING] machine learning
+  [MISSING] data preprocessing
+  [MISSING] api
+  [MISSING] prompt engineering
+  [MISSING] deep learning
+  [MISSING] streamlit
+
+Recommendation:
+  Moderate match. Work on missing skills before applying.

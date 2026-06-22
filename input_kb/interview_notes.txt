@@ -1,0 +1,44 @@
+Interview Preparation Notes
+
+Python:
+Python is a high-level interpreted language. Key concepts include variables, loops, functions, OOP, file handling, and libraries.
+
+Machine Learning:
+Machine learning is a subset of AI where models learn from data. Key types are supervised, unsupervised, and reinforcement learning.
+
+Data Preprocessing:
+Data preprocessing includes handling missing values, normalization, encoding categorical variables, and splitting data into train/test sets.
+
+GitHub:
+GitHub is a platform for version control using Git. Key commands: git init, git add, git commit, git push, git pull, git clone.
+
+API:
+An API is an Application Programming Interface. REST APIs use HTTP methods GET, POST, PUT, DELETE to communicate between systems.
+
+Prompt Engineering:
+Prompt engineering is the practice of designing effective inputs for large language models to get accurate and useful outputs.
+
+SQL:
+SQL is Structured Query Language used to manage relational databases. Key commands: SELECT, INSERT, UPDATE, DELETE, JOIN.
+
+Communication Skills:
+Good communication includes active listening, clear expression, asking questions, and adapting your message to your audience.
+
+Problem Solving:
+Problem solving involves understanding the problem, breaking it into steps, coding a solution, testing, and improving.
+
+OOP:
+Object Oriented Programming uses classes and objects. Key concepts: encapsulation, inheritance, polymorphism, abstraction.
+
+Deep Learning:
+Deep learning uses neural networks with multiple layers. Key frameworks are TensorFlow and PyTorch.
+
+Streamlit:
+Streamlit is a Python library for building interactive web applications for data science and machine learning projects.
+
+Behavioral Questions:
+- Tell me about yourself: mention your degree, skills, and best projects
+- Why this role: explain your interest in AI and how your skills match
+- Strengths: Python, problem solving, learning fast
+- Weaknesses: limited industry experience but actively improving
+- Why should we hire you: dedicated, quick learner, passionate about AI

@@ -1,0 +1,18 @@
+APPLICATION REMINDERS
+========================================
+
+Generated: 2026-06-23 01:04
+
+[APP-001] Junior AI Engineer Intern at ABC Tech Solutions
+  Status: Interview Scheduled
+  *** INTERVIEW on 2026-05-03 ***
+  Action: Revise Python, ML basics, and prepare project explanations
+
+[APP-002] AI Research Intern at DataSoft Pakistan
+  Status: Applied
+  Follow up on: 2026-05-04
+
+[APP-003] ML Intern at TechVentures
+  Status: Not Applied
+  TODO: Tailor resume and apply soon.
+

@@ -1,0 +1,76 @@
+INTERVIEW QUESTIONS
+========================================
+
+Technical Questions (from job requirements):
+  Q: Explain your understanding of python.
+  Q: How have you used python in a project?
+
+  Q: Explain your understanding of machine learning.
+  Q: How have you used machine learning in a project?
+
+  Q: Explain your understanding of data preprocessing.
+  Q: How have you used data preprocessing in a project?
+
+  Q: Explain your understanding of github.
+  Q: How have you used github in a project?
+
+  Q: Explain your understanding of git.
+  Q: How have you used git in a project?
+
+  Q: Explain your understanding of api.
+  Q: How have you used api in a project?
+
+  Q: Explain your understanding of prompt engineering.
+  Q: How have you used prompt engineering in a project?
+
+  Q: Explain your understanding of sql.
+  Q: How have you used sql in a project?
+
+  Q: Explain your understanding of communication.
+  Q: How have you used communication in a project?
+
+  Q: Explain your understanding of problem solving.
+  Q: How have you used problem solving in a project?
+
+  Q: Explain your understanding of oop.
+  Q: How have you used oop in a project?
+
+  Q: Explain your understanding of database.
+  Q: How have you used database in a project?
+
+  Q: Explain your understanding of jupyter.
+  Q: How have you used jupyter in a project?
+
+  Q: Explain your understanding of pandas.
+  Q: How have you used pandas in a project?
+
+  Q: Explain your understanding of numpy.
+  Q: How have you used numpy in a project?
+
+  Q: Explain your understanding of deep learning.
+  Q: How have you used deep learning in a project?
+
+  Q: Explain your understanding of flask.
+  Q: How have you used flask in a project?
+
+  Q: Explain your understanding of streamlit.
+  Q: How have you used streamlit in a project?
+
+
+HR and Behavioral Questions:
+  Q: Tell me about yourself.
+  Q: Why are you interested in this role?
+  Q: Describe your best project.
+  Q: What are your strengths and weaknesses?
+  Q: Where do you see yourself in 3 years?
+  Q: Why should we select you over other candidates?
+
+Questions from Knowledge Base:
+  Q: How would you explain this in an interview: '--- FILE: interview_notes.txt ---'
+  Q: How would you explain this in an interview: 'Interview Preparation Notes'
+  Q: How would you explain this in an interview: 'Python is a high-level interpreted language. Key concepts include variables, loo'
+  Q: How would you explain this in an interview: 'Machine learning is a subset of AI where models learn from data. Key types are s'
+  Q: How would you explain this in an interview: 'Data preprocessing includes handling missing values, normalization, encoding cat'
+  Q: How would you explain this in an interview: 'GitHub is a platform for version control using Git. Key commands: git init, git '
+  Q: How would you explain this in an interview: 'An API is an Application Programming Interface. REST APIs use HTTP methods GET, '
+  Q: How would you explain this in an interview: 'Prompt engineering is the practice of designing effective inputs for large langu'
