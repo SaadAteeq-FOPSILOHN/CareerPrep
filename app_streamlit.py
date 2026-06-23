@@ -36,9 +36,8 @@ st.markdown("""
         font-family: 'Outfit', sans-serif;
     }
     
-    /* Hide Streamlit default menus, headers, and footers for privacy */
+    /* Hide Streamlit default menus and footers for privacy, keeping header toggle visible */
     #MainMenu {visibility: hidden;}
-    header {visibility: hidden;}
     footer {visibility: hidden;}
     .stDeployButton {display:none !important;}
     
