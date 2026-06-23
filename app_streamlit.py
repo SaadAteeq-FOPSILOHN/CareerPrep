@@ -452,6 +452,48 @@ def generate_cover_letter_with_ai(api_key, resume_text, job_text):
     """
     return call_gemini(api_key, prompt)
 
+def fetch_jobs_from_api(query):
+    url = f"https://remotive.com/api/remote-jobs?search={query}&limit=15"
+    try:
+        response = requests.get(url, timeout=15)
+        if response.status_code == 200:
+            return response.json().get("jobs", [])
+    except Exception as e:
+        st.error(f"Error fetching jobs from Remotive: {e}")
+    return []
+
+def get_job_recommendations(resume_text, jobs):
+    resume_skills = extract_keywords(resume_text)
+    
+    scored_jobs = []
+    for job in jobs:
+        title = job.get("title", "")
+        tags = job.get("tags", [])
+        desc = job.get("description", "")
+        
+        # Combine text to analyze
+        combined_job_text = f"{title} {' '.join(tags)} {desc}"
+        job_skills = extract_keywords(combined_job_text)
+        
+        matched, missing, score = compare_skills(job_skills, resume_skills)
+        
+        scored_jobs.append({
+            "id": job.get("id"),
+            "title": title,
+            "company_name": job.get("company_name"),
+            "url": job.get("url"),
+            "candidate_required_location": job.get("candidate_required_location", "Remote"),
+            "salary": job.get("salary", "Not disclosed"),
+            "tags": tags,
+            "match_score": score,
+            "matched_skills": matched,
+            "missing_skills": missing
+        })
+        
+    scored_jobs.sort(key=lambda x: x["match_score"], reverse=True)
+    return scored_jobs
+
+
 # --- MAIN GUI FLOW ---
 
 st.write('<div class="banner-title">CareerPrep AI Copilot</div>', unsafe_allow_html=True)
@@ -478,7 +520,8 @@ menu = st.sidebar.radio("Go to:", [
     "🔍 Skill Matcher Hub",
     "📄 Cover Letter & Study Plan",
     "💡 Interactive Interview Prep",
-    "📋 Kanban Applications Board"
+    "📋 Kanban Applications Board",
+    "💼 Job Recommender"
 ])
 
 st.sidebar.markdown("---")
@@ -916,3 +959,118 @@ elif menu == "📋 Kanban Applications Board":
         file_name="applications.csv",
         mime="text/csv"
     )
+
+# --- MENU: JOB RECOMMENDER ---
+elif menu == "💼 Job Recommender":
+    st.write('<div class="section-title">AI Job Search & Recommendations</div>', unsafe_allow_html=True)
+    
+    if not st.session_state.resume_text.strip():
+        st.info("Please add/upload your Resume in the **🔍 Skill Matcher Hub** first so we can recommend matching jobs.")
+    else:
+        resume_skills = extract_keywords(st.session_state.resume_text)
+        default_query = resume_skills[0] if resume_skills else "Python"
+        
+        col_q1, col_q2 = st.columns([3, 1])
+        with col_q1:
+            search_query = st.text_input("Job Role / Tech Stack (e.g. Python, Django, React):", value=default_query)
+        with col_q2:
+            st.markdown("<br/>", unsafe_allow_html=True)
+            search_btn = st.button("Search Jobs", type="primary", use_container_width=True)
+            
+        if 'last_query' not in st.session_state:
+            st.session_state.last_query = ""
+        if 'recommended_jobs' not in st.session_state:
+            st.session_state.recommended_jobs = []
+            
+        if search_btn or (search_query and st.session_state.last_query != search_query):
+            with st.spinner("Fetching matching jobs from Remotive API..."):
+                raw_jobs = fetch_jobs_from_api(search_query)
+                st.session_state.recommended_jobs = get_job_recommendations(
+                    st.session_state.resume_text, raw_jobs
+                )
+                st.session_state.last_query = search_query
+                st.success(f"Found {len(st.session_state.recommended_jobs)} job listings!")
+                
+        # Display recommendations
+        if st.session_state.recommended_jobs:
+            st.write(f"Showing results for **{st.session_state.last_query}** sorted by compatibility:")
+            
+            for index, job in enumerate(st.session_state.recommended_jobs):
+                score = job["match_score"]
+                score_color = "#10b981" if score >= 70 else "#f59e0b" if score >= 40 else "#ef4444"
+                
+                # Custom job card container
+                st.markdown(f"""
+                <div class="premium-card">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                        <div>
+                            <h3 style="margin: 0; font-size: 18px; color: var(--text-color, #1f2937);">{job['title']}</h3>
+                            <p style="margin: 2px 0 0 0; font-size: 14px; font-weight: 600; color: #4f46e5;">{job['company_name']}</p>
+                        </div>
+                        <div style="background-color: {score_color}15; color: {score_color}; border: 1px solid {score_color}30; padding: 4px 12px; border-radius: 9999px; font-size: 13px; font-weight: 700;">
+                            {int(score)}% Match
+                        </div>
+                    </div>
+                    <div style="font-size: 13px; color: var(--text-color, #6b7280); margin-bottom: 12px; opacity: 0.85;">
+                        📍 Location: <strong>{job['candidate_required_location']}</strong> &nbsp;&nbsp;|&nbsp;&nbsp; 💰 Salary: <strong>{job['salary']}</strong>
+                    </div>
+                """, unsafe_allow_html=True)
+                
+                # Display matched/missing tags
+                col_m1, col_m2 = st.columns(2)
+                with col_m1:
+                    if job["matched_skills"]:
+                        badges = "".join([f'<span class="badge badge-matched">✓ {s}</span>' for s in job["matched_skills"][:5]])
+                        st.markdown(f"Matched: {badges}", unsafe_allow_html=True)
+                with col_m2:
+                    if job["missing_skills"]:
+                        badges = "".join([f'<span class="badge badge-missing">✗ {s}</span>' for s in job["missing_skills"][:5]])
+                        st.markdown(f"Missing: {badges}", unsafe_allow_html=True)
+                
+                st.markdown("</div>", unsafe_allow_html=True)
+                
+                # Buttons for actions
+                col_b1, col_b2 = st.columns([1, 1])
+                with col_b1:
+                    st.link_button("🔗 Apply on Remotive", job["url"], use_container_width=True)
+                with col_b2:
+                    df_apps = st.session_state.applications
+                    is_added = not df_apps[(df_apps['company'] == job['company_name']) & (df_apps['role'] == job['title'])].empty
+                    
+                    if is_added:
+                        st.button("✅ Already Added", key=f"added_{job['id']}_{index}", disabled=True, use_container_width=True)
+                    else:
+                        add_btn = st.button("➕ Add to Kanban", key=f"add_{job['id']}_{index}", use_container_width=True)
+                        if add_btn:
+                            # Generate APP-ID
+                            if len(df_apps) > 0:
+                                try:
+                                    last_id = max(df_apps['application_id'].apply(lambda x: int(x.split('-')[1]) if '-' in str(x) else 0))
+                                    new_id = f"APP-{str(last_id + 1).zfill(3)}"
+                                except:
+                                    new_id = f"APP-{str(len(df_apps) + 1).zfill(3)}"
+                            else:
+                                new_id = "APP-001"
+                                
+                            new_row = {
+                                "application_id": new_id,
+                                "company": job['company_name'],
+                                "role": job['title'],
+                                "source": "Remotive Remote Jobs",
+                                "status": "Not Applied",
+                                "applied_date": "",
+                                "interview_date": "",
+                                "follow_up_date": "",
+                                "next_action": "Apply through Remotive link",
+                                "notes": f"Salary: {job['salary']}. Match Score: {int(score)}%. URL: {job['url']}"
+                            }
+                            
+                            updated_df = pd.concat([df_apps, pd.DataFrame([new_row])], ignore_index=True)
+                            if save_applications(updated_df):
+                                st.session_state.applications = updated_df
+                                st.success(f"Added {job['title']} at {job['company_name']} to your Kanban Board!")
+                                st.rerun()
+                st.markdown("<br/>", unsafe_allow_html=True)
+        else:
+            st.info("Enter a role or skill query above and click 'Search Jobs' to fetch live remote job openings.")
+
