@@ -907,7 +907,11 @@ elif menu == "💡 Interview Coach":
     # SUB-TAB 1: Q&A STUDY GUIDE
     with sub_tab_qa:
         st.write("### Custom Study Q&A Guide")
-        kb_file = st.file_uploader("Upload Study Notes File (.txt):", type=["txt"], key="coach_kb_file")
+        if PYPDF_AVAILABLE:
+            kb_file = st.file_uploader("Upload Study Notes (.txt, .pdf, .docx, .md):", type=["txt", "pdf", "docx", "md"], key="coach_kb_file")
+        else:
+            kb_file = st.file_uploader("Upload Study Notes (.txt, .docx, .md):", type=["txt", "docx", "md"], key="coach_kb_file")
+            st.info("💡 To enable PDF notes parsing, install `pypdf` in your environment: `pip install pypdf`")
         if kb_file is not None:
             st.session_state.kb_text = load_file_content(kb_file)
         kb_text_area = st.text_area("Review/Edit Study Notes:", value=st.session_state.kb_text, height=120, key="coach_kb_area")
