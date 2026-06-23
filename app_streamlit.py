@@ -489,6 +489,18 @@ if ai_enabled:
     st.session_state.api_key = api_key_input
     if not api_key_input:
         st.sidebar.info("💡 Generate a free key from Google AI Studio and enter it above.")
+    st.sidebar.markdown("""
+    <div style="font-size: 11px; color: #858b9c; border-top: 1px solid rgba(128,128,128,0.2); padding-top: 8px; margin-top: 10px;">
+        <strong>Why provide this key?</strong><br/>
+        This API key connects the dashboard to the Gemini AI model to enable:
+        <ul>
+            <li>🧠 <strong>Semantic Skill Matching</strong> (intelligent resume-to-job analysis)</li>
+            <li>✍️ <strong>AI Cover Letter Writer</strong> (personalized drafts)</li>
+            <li>💬 <strong>AI Mock Interview Chat</strong> (simulated recruiter feedback)</li>
+        </ul>
+        <em>Your key is stored strictly in browser session memory and is never shared.</em>
+    </div>
+    """, unsafe_allow_html=True)
 else:
     st.sidebar.warning("Running in Offline Keyword Matcher Mode.")
 
