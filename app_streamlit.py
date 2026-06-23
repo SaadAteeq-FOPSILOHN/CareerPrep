@@ -36,6 +36,12 @@ st.markdown("""
         font-family: 'Outfit', sans-serif;
     }
     
+    /* Hide Streamlit default menus, headers, and footers for privacy */
+    #MainMenu {visibility: hidden;}
+    header {visibility: hidden;}
+    footer {visibility: hidden;}
+    .stDeployButton {display:none !important;}
+    
     /* Clean Premium Card Container */
     .premium-card {
         background-color: var(--secondary-background-color, #ffffff);
