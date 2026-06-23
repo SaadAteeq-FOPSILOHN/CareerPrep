@@ -493,6 +493,143 @@ def get_job_recommendations(resume_text, jobs):
     scored_jobs.sort(key=lambda x: x["match_score"], reverse=True)
     return scored_jobs
 
+def optimize_resume_with_ai(api_key, resume_text, job_text, user_info):
+    prompt = f"""
+    You are a professional resume writer. Optimize the candidate's resume to match the target job description.
+    Naturally integrate the job's required skills into their professional summary, project descriptions, and experience bullet points.
+    Do not fabricate degrees or fake credentials, but rewrite existing descriptions to make them sound highly compatible with the target job.
+    
+    Candidate Details:
+    - Name: {user_info['name']}
+    - Email: {user_info['email']}
+    - Phone: {user_info['phone']}
+    - LinkedIn: {user_info['linkedin']}
+    
+    Original Resume:
+    {resume_text}
+    
+    Target Job Description:
+    {job_text}
+    
+    Respond with a raw JSON object ONLY matching this schema:
+    {{
+        "name": "...",
+        "contact": "...",
+        "summary": "Professional summary paragraph...",
+        "experience": [
+            {{"title": "Job Title/Project Name", "details": "Description of work including optimized bullet points..."}}
+        ],
+        "skills": ["Skill 1", "Skill 2"]
+    }}
+    Do not wrap in markdown or add extra headers. Raw JSON only.
+    """
+    res = call_gemini(api_key, prompt)
+    try:
+        cleaned = clean_json_response(res)
+        return json.loads(cleaned)
+    except Exception as e:
+        st.error(f"Error parsing optimized resume: {e}")
+        return None
+
+def generate_html_resume(opt_res):
+    html = f"""<!DOCTYPE html>
+    <html>
+    <head>
+    <meta charset="utf-8">
+    <title>{opt_res.get('name', 'Resume')}</title>
+    <style>
+        body {{
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            line-height: 1.5;
+            color: #333;
+            margin: 40px;
+        }}
+        .header {{
+            text-align: center;
+            border-bottom: 2px solid #4f46e5;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }}
+        .name {{
+            font-size: 28px;
+            font-weight: bold;
+            margin: 0;
+            color: #1e3a8a;
+        }}
+        .contact {{
+            font-size: 13px;
+            color: #555;
+            margin-top: 5px;
+        }}
+        .section-title {{
+            font-size: 16px;
+            font-weight: bold;
+            text-transform: uppercase;
+            color: #4f46e5;
+            border-bottom: 1px solid #ddd;
+            margin-top: 25px;
+            margin-bottom: 10px;
+            padding-bottom: 3px;
+        }}
+        .item {{
+            margin-bottom: 15px;
+        }}
+        .item-title {{
+            font-weight: bold;
+            font-size: 14px;
+        }}
+        .skills-list {{
+            font-weight: 500;
+        }}
+    </style>
+    </head>
+    <body>
+        <div class="header">
+            <div class="name">{opt_res.get('name', '')}</div>
+            <div class="contact">{opt_res.get('contact', '')}</div>
+        </div>
+        
+        <div class="section-title">Professional Summary</div>
+        <p>{opt_res.get('summary', '')}</p>
+        
+        <div class="section-title">Experience & Projects</div>
+    """
+    for exp in opt_res.get('experience', []):
+        html += f"""
+        <div class="item">
+            <div class="item-title">{exp.get('title', '')}</div>
+            <p style="margin: 5px 0 0 0; white-space: pre-line;">{exp.get('details', '')}</p>
+        </div>
+        """
+    
+    skills_str = ", ".join(opt_res.get('skills', []))
+    html += f"""
+        <div class="section-title">Technical Skills</div>
+        <p class="skills-list">{skills_str}</p>
+    </body>
+    </html>
+    """
+    return html
+
+def generate_networking_message(api_key, company, role, target, msg_type, resume_text):
+    prompt = f"""
+    You are a professional career coach. Write a networking message on behalf of a candidate applying for the role of '{role}' at '{company}'.
+    The target recipient is a '{target}', and the message type is '{msg_type}'.
+    Use the candidate's skills and highlights from their resume to draft a compelling, highly personalized message.
+    
+    Candidate Resume:
+    {resume_text}
+    
+    Important Constraints:
+    - If the message type is 'LinkedIn Connection Request (<300 chars)', it MUST be strictly under 300 characters (including spaces).
+    - Keep emails and other messages concise, professional, and clear.
+    - Do not use placeholders (like [Name] or [Company]) if you can infer the company or role; otherwise use standard square brackets.
+    
+    Return the message text directly. No intro or outro text.
+    """
+    return call_gemini(api_key, prompt)
+
+
 
 # --- MAIN GUI FLOW ---
 
@@ -521,7 +658,10 @@ menu = st.sidebar.radio("Go to:", [
     "📄 Cover Letter & Study Plan",
     "💡 Interactive Interview Prep",
     "📋 Kanban Applications Board",
-    "💼 Job Recommender"
+    "💼 Job Recommender",
+    "📊 Application Analytics",
+    "✍️ AI Resume Builder",
+    "✉️ Networking Hub"
 ])
 
 st.sidebar.markdown("---")
@@ -1073,4 +1213,226 @@ elif menu == "💼 Job Recommender":
                 st.markdown("<br/>", unsafe_allow_html=True)
         else:
             st.info("Enter a role or skill query above and click 'Search Jobs' to fetch live remote job openings.")
+
+# --- MENU: APPLICATION ANALYTICS ---
+elif menu == "📊 Application Analytics":
+    st.write('<div class="section-title">Job Application Analytics Suite</div>', unsafe_allow_html=True)
+    df_apps = st.session_state.applications
+    
+    if len(df_apps) == 0:
+        st.info("No applications to analyze. Add some job applications in the Kanban Board or Job Recommender first!")
+    else:
+        # Metrics Calculation
+        total_apps = len(df_apps)
+        
+        # Clean status check
+        df_apps['status_clean'] = df_apps['status'].str.lower().str.strip()
+        
+        interviews = len(df_apps[df_apps['status_clean'] == 'interview scheduled'])
+        offers = len(df_apps[df_apps['status_clean'] == 'offer received'])
+        rejected = len(df_apps[df_apps['status_clean'] == 'rejected'])
+        applied = len(df_apps[df_apps['status_clean'] == 'applied'])
+        
+        interview_rate = 0 if total_apps == 0 else round((interviews / total_apps) * 100, 1)
+        offer_rate = 0 if total_apps == 0 else round((offers / total_apps) * 100, 1)
+        
+        # Render Metrics Row
+        col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+        with col_m1:
+            st.metric("Total Applications", total_apps)
+        with col_m2:
+            st.metric("Interviews Scheduled", interviews)
+        with col_m3:
+            st.metric("Offers Received", offers)
+        with col_m4:
+            st.metric("Success Rate (Offers)", f"{offer_rate}%")
+            
+        st.markdown("---")
+        
+        # Render Charts
+        col_c1, col_c2 = st.columns(2)
+        
+        with col_c1:
+            st.write("#### 📊 Funnel Breakdown (Status)")
+            status_counts = df_apps['status'].value_counts()
+            st.bar_chart(status_counts)
+            
+        with col_c2:
+            st.write("#### 🎯 Application Channels (Sources)")
+            source_counts = df_apps['source'].value_counts()
+            if len(source_counts) > 0:
+                st.bar_chart(source_counts)
+            else:
+                st.info("No sources logged.")
+                
+        st.markdown("---")
+        st.write("#### 📈 Weekly Application Velocity")
+        # Parse applied_date
+        df_dates = df_apps[df_apps['applied_date'].str.strip() != ''].copy()
+        if len(df_dates) > 0:
+            try:
+                df_dates['applied_date'] = pd.to_datetime(df_dates['applied_date'])
+                df_dates = df_dates.sort_values('applied_date')
+                timeline = df_dates.groupby(df_dates['applied_date'].dt.to_period('W')).size().reset_index(name='count')
+                timeline['applied_date'] = timeline['applied_date'].dt.to_timestamp()
+                timeline = timeline.set_index('applied_date')
+                st.line_chart(timeline)
+            except Exception as e:
+                st.write("Complete the applied dates in the log to view weekly submission trends.")
+        else:
+            st.info("Add applied dates in your tracking cards to visualize submission timelines.")
+
+# --- MENU: AI RESUME BUILDER ---
+elif menu == "✍️ AI Resume Builder":
+    st.write('<div class="section-title">AI Resume Optimizer & Premium Exporter</div>', unsafe_allow_html=True)
+    
+    if not st.session_state.resume_text.strip():
+        st.info("Please add/upload your Resume in the **🔍 Skill Matcher Hub** first.")
+    else:
+        # Check if analyzed skills exist, if not run local matching on defaults
+        if 'matched' not in st.session_state:
+            st.session_state.matched = []
+        if 'missing' not in st.session_state:
+            st.session_state.missing = []
+            
+        col_res1, col_res2 = st.columns([1, 2])
+        
+        with col_res1:
+            st.write("#### Contact Information")
+            name_input = st.text_input("Full Name:", value="Saad Ateeq")
+            email_input = st.text_input("Email:", value="saadateeq8090@gmail.com")
+            phone_input = st.text_input("Phone:", value="+92 300 1234567")
+            linkedin_input = st.text_input("LinkedIn Profile Link:", value="linkedin.com/in/saadateeq")
+            
+            user_info = {
+                "name": name_input,
+                "email": email_input,
+                "phone": phone_input,
+                "linkedin": linkedin_input
+            }
+            
+            st.markdown("---")
+            st.write("#### Optimize for Role")
+            # Select target job
+            job_target = st.text_area("Target Job Requirements:", value=st.session_state.job_text, height=120)
+            
+            optimize_btn = st.button("🧠 Generate AI Optimized Resume", type="primary", use_container_width=True)
+            
+        with col_res2:
+            st.write("#### Optimized Resume Preview")
+            
+            if 'opt_resume' not in st.session_state:
+                st.session_state.opt_resume = None
+                
+            if optimize_btn:
+                if not ai_enabled or not st.session_state.api_key:
+                    st.error("AI Optimization requires **Gemini AI Copilot** to be enabled in the sidebar.")
+                else:
+                    with st.spinner("Gemini is optimizing your resume bullets..."):
+                        optimized_data = optimize_resume_with_ai(
+                            st.session_state.api_key, st.session_state.resume_text, job_target, user_info
+                        )
+                        if optimized_data:
+                            st.session_state.opt_resume = optimized_data
+                            st.success("Resume optimized successfully!")
+                            
+            if st.session_state.opt_resume:
+                opt = st.session_state.opt_resume
+                
+                # Editable Fields
+                opt_name = st.text_input("Name:", value=opt.get("name", name_input))
+                opt_contact = st.text_input("Contact details summary:", value=opt.get("contact", f"{email_input} | {phone_input} | {linkedin_input}"))
+                opt_summary = st.text_area("Professional Summary:", value=opt.get("summary", ""), height=100)
+                
+                st.write("##### Experience & Projects")
+                opt_exp = []
+                for idx, exp in enumerate(opt.get("experience", [])):
+                    exp_title = st.text_input(f"Title {idx+1}:", value=exp.get("title", ""), key=f"title_{idx}")
+                    exp_details = st.text_area(f"Details {idx+1}:", value=exp.get("details", ""), key=f"details_{idx}", height=120)
+                    opt_exp.append({"title": exp_title, "details": exp_details})
+                    
+                opt_skills_str = st.text_input("Skills (comma-separated):", value=", ".join(opt.get("skills", [])))
+                opt_skills = [s.strip() for s in opt_skills_str.split(",") if s.strip()]
+                
+                # Save edits back to session state
+                st.session_state.opt_resume = {
+                    "name": opt_name,
+                    "contact": opt_contact,
+                    "summary": opt_summary,
+                    "experience": opt_exp,
+                    "skills": opt_skills
+                }
+                
+                st.markdown("---")
+                # Generate HTML
+                html_resume = generate_html_resume(st.session_state.opt_resume)
+                
+                st.download_button(
+                    label="⬇️ Download Premium HTML Resume",
+                    data=html_resume,
+                    file_name="optimized_resume.html",
+                    mime="text/html",
+                    use_container_width=True
+                )
+                st.info("💡 Tip: Open the downloaded HTML file in your browser and select 'Print -> Save as PDF' for a professional PDF copy.")
+            else:
+                st.info("Configure your contact info and click 'Generate AI Optimized Resume' to generate a tailored copy.")
+
+# --- MENU: NETWORKING HUB ---
+elif menu == "✉️ Networking Hub":
+    st.write('<div class="section-title">AI Cold Outreach & LinkedIn Networking Writer</div>', unsafe_allow_html=True)
+    
+    if not st.session_state.resume_text.strip():
+        st.info("Please add/upload your Resume in the **🔍 Skill Matcher Hub** first.")
+    else:
+        df_apps = st.session_state.applications
+        
+        col_net1, col_net2 = st.columns([1, 2])
+        
+        with col_net1:
+            st.write("#### Select Application")
+            if len(df_apps) == 0:
+                target_company = st.text_input("Company Name (e.g. Google)")
+                target_role = st.text_input("Role (e.g. Software Engineer)")
+            else:
+                app_options = [f"{row['role']} at {row['company']}" for _, row in df_apps.iterrows()]
+                selected_app_idx = st.selectbox("Select target application:", range(len(app_options)), format_func=lambda x: app_options[x])
+                target_company = df_apps.iloc[selected_app_idx]['company']
+                target_role = df_apps.iloc[selected_app_idx]['role']
+                
+            st.markdown("---")
+            st.write("#### Message Settings")
+            target_recipient = st.selectbox("Who is the message for?", ["Recruiter / HR Representative", "Hiring Manager", "Team Lead / Engineering Manager", "Alumni / Peer Engineer"])
+            message_type = st.selectbox("Message Purpose:", [
+                "LinkedIn Connection Request (<300 chars)",
+                "Cold Outreach Email / Cover Message",
+                "Ghosted Application Follow-up",
+                "Post-Interview Thank You Note"
+            ])
+            
+            write_btn = st.button("✉️ Draft Outreach Message", type="primary", use_container_width=True)
+            
+        with col_net2:
+            st.write("#### Generated Message Draft")
+            
+            if 'networking_draft' not in st.session_state:
+                st.session_state.networking_draft = ""
+                
+            if write_btn:
+                if not ai_enabled or not st.session_state.api_key:
+                    st.error("AI Outreach requires **Gemini AI Copilot** to be enabled in the sidebar.")
+                else:
+                    with st.spinner("Gemini is composing your message..."):
+                        draft = generate_networking_message(
+                            st.session_state.api_key, target_company, target_role, target_recipient, message_type, st.session_state.resume_text
+                        )
+                        st.session_state.networking_draft = draft
+                        st.success("Draft created!")
+                        
+            if st.session_state.networking_draft:
+                st.text_area("Copy your draft:", value=st.session_state.networking_draft, height=300)
+                st.download_button("Download Message Draft (.txt)", st.session_state.networking_draft, file_name="outreach_message.txt")
+            else:
+                st.info("Configure settings and click 'Draft Outreach Message' to generate your personalized copy.")
+
 
